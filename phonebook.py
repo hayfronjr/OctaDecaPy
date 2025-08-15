@@ -36,11 +36,11 @@ def edit_contact(name, new_phone):
     elif name in contacts:
         contacts[name] = new_phone
         messagebox.showinfo("Success", f"Contact '{name}' updated successfully.")
-    else:
-        messagebox.showerror("Error", "Contact not found.")
         refresh_contacts()
         name_entry.delete(0, tk.END)
         phone_entry.delete(0, tk.END)
+    else:
+        messagebox.showerror("Error", "Contact not found.")
 
 
 
@@ -56,6 +56,37 @@ def delete_contact(name):
     refresh_contacts()
     name_entry.delete(0, tk.END)
     phone_entry.delete(0, tk.END)
+
+
+    # Autocomplete functions 
+def update_suggestions(event):
+    typed_text = name_entry.get().strip()
+    listbox_suggestions.delete(0, tk.END)
+
+    if typed_text:
+        # Match both name and phone
+        matches = [f"{name} : {phone}" for name, phone in contacts.items() if name.lower().startswith(typed_text.lower())]
+        if matches:
+            listbox_suggestions.place(
+                x=name_entry.winfo_x() + frame.winfo_x(),
+                y=name_entry.winfo_y() + frame.winfo_y() + name_entry.winfo_height()
+            )
+            for match in matches:
+                listbox_suggestions.insert(tk.END, match)
+        else:
+            listbox_suggestions.place_forget()
+    else:
+        listbox_suggestions.place_forget()
+
+def fill_name_from_listbox(event):
+    selected = listbox_suggestions.get(tk.ACTIVE)
+    if " : " in selected:
+        name, phone = selected.split(" : ", 1)
+        name_entry.delete(0, tk.END)
+        name_entry.insert(0, name)
+        phone_entry.delete(0, tk.END)
+        phone_entry.insert(0, phone)
+    listbox_suggestions.place_forget()
 
 
 
@@ -79,6 +110,8 @@ tk.Label(frame, text="Phone:").grid(row=1, column=0, sticky="e")
 phone_entry = tk.Entry(frame, width=30)
 phone_entry.grid(row=1, column=1)
 
+
+
 # Display contacts in window
 view_frame = tk.Frame(root)
 view_frame.pack(pady=10) 
@@ -86,24 +119,13 @@ view_frame.grid_columnconfigure(0, weight=1)
 view_frame.grid_rowconfigure(0, weight=1)
 refresh_contacts()
 
-def filter_contacts(event=None):
-    name_search = name_entry.get().strip().lower()
-    phone_search = phone_entry.get().strip().lower()
-    # Clear previous labels
-    for widget in view_frame.winfo_children():
-        widget.destroy()
-    found = False
-    for name, phone in contacts.items():
-        if (name_search in name.lower() or not name_search) and (phone_search in phone.lower() or not phone_search):
-            tk.Label(view_frame, text=f"{name}: {phone}").grid(sticky="w")
-            found = True
-    if not found:
-        tk.Label(view_frame, text="No contacts found.").grid(sticky="w")
+# Suggestions Listbox (hidden initially)
+listbox_suggestions = tk.Listbox(root, width=30, height=4)
+listbox_suggestions.bind("<<ListboxSelect>>", fill_name_from_listbox)
+listbox_suggestions.bind("<ButtonRelease-1>", fill_name_from_listbox)
 
-# Bind the filter function to key release events
-name_entry.bind("<KeyRelease>", filter_contacts)
-phone_entry.bind("<KeyRelease>", filter_contacts)
-
+# Bind typing event for autocomplete
+name_entry.bind("<KeyRelease>", update_suggestions)
 
 # Buttons
 button_frame = tk.Frame(root)
